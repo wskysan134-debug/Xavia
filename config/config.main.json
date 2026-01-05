@@ -13,15 +13,15 @@
         "forceLogin": true,
         "userAgent": "Mozilla/5.0 (Linux; Android 9; SM-G973U Build/PPR1.180610.011) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Mobile Safari/537.36"
     },
-    "LANGUAGE": "ar_SY.yml",
+    "LANGUAGE": "ar.yml",
     "LOG_LEVEL": 1,
     "MODERATORS": [
-        "100082631832134"
+        "61582847128354"
     ],
     "ABSOLUTES": [
-        "100082631832134"
+        "61582847128354"
     ],
-    "NAME": "x",
+    "NAME": "𝑷𝑨𝑵𝑰𝑺𝑺𝑨 『🦋❁ﾟ』𝑳𝑨𝑷 ⇊❖츄『💎",
     "PREFIX": ".",
     "timezone": "Asia/Ho_Chi_Minh",
     "REFRESH": "43200000",
