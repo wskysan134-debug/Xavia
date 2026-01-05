@@ -1,58 +1,107 @@
-async function onCall({ message, args, getLang, userPermissions, prefix }) {
-    const { commandsConfig } = global.plugins;
-    const commandName = args[0]?.toLowerCase();
-
-    if (!commandName) {
-        let commands = {};
-        const language = message.thread?.data?.language || global.config.LANGUAGE || 'ar_SY';
-
-        // ترتيب الأوامر وتجميعها حسب الفئة
-        for (const [key, value] of commandsConfig.entries()) {
-            if (!!value.isHidden) continue;
-            if (!!value.isAbsolute ? !global.config?.ABSOLUTES.some(e => e == message.senderID) : false) continue;
-            if (!value.hasOwnProperty("permissions")) value.permissions = [0, 1, 2];
-            if (!value.permissions.some(p => userPermissions.includes(p))) continue;
-            if (!commands.hasOwnProperty(value.category)) commands[value.category] = [];
-            commands[value.category].push(value._name && value._name[language] ? value._name[language] : key);
-        }
-
-        // إرسال الرسالة الأولى
-        await message.reply("👀 أين المساعدة؟ أنا لا أراها ...");
-
-        // تقسيم الأوامر لصفحات (كل صفحة 20)
-        const allCategories = Object.keys(commands);
-        let allCommands = [];
-        allCategories.forEach(category => {
-            const cmds = commands[category].map(c => `⭐🍭 ${c} 🍭⭐`);
-            allCommands.push(`⌈ ✨ ${category.toUpperCase()} ✨ ⌋\n${cmds.join("\n")}`);
-        });
-
-        const flatCommands = allCommands.join("\n\n").split("\n");
-        const pageSize = 20;
-        for (let i = 0; i < flatCommands.length; i += pageSize) {
-            const page = flatCommands.slice(i, i + pageSize).join("\n");
-            await message.reply(`${page}\n\n⭐🍭 Dora Bot 🍭⭐\nالمطور: 𝓗𝓪𝓶𝓸𝓸𝓭𝔂 𝓢𝓪𝓷 🇸🇩`);
-        }
-    } else {
-        const command = commandsConfig.get(getCommandName(commandName, commandsConfig));
-        if (!command) return message.reply(getLang("help.commandNotExists", { command: commandName }));
-
-        const isHidden = !!command.isHidden;
-        const isUserValid = !!command.isAbsolute ? global.config?.ABSOLUTES.some(e => e == message.senderID) : true;
-        const isPermissionValid = command.permissions.some(p => userPermissions.includes(p));
-        if (isHidden || !isUserValid || !isPermissionValid)
-            return message.reply(getLang("help.commandNotExists", { command: commandName }));
-
-        message.reply(getLang("help.commandDetails", {
-            name: command.name,
-            aliases: command.aliases.join(", "),
-            version: command.version || "1.0.0",
-            description: command.description || '',
-            usage: `${prefix}${commandName} ${command.usage || ''}`,
-            permissions: command.permissions.map(p => getLang(String(p))).join(", "),
-            category: command.category,
-            cooldown: command.cooldown || 3,
-            credits: command.credits || ""
-        }).replace(/^ +/gm, ''));
-    }
+const config = {
+    name: "مساعدة",
+    aliases: ["help", "اوامر"],
+    description: "عرض قائمة أوامر البوت بشكل مفصل",
+    usage: "",
+    credits: "XaviaTeam"
 }
+
+async function onCall({ message, args, prefix, userPermissions }) {
+    const { commandsConfig } = global.plugins;
+
+    // لو طلب شرح أمر معيّن
+    const commandName = args[0]?.toLowerCase();
+    if (commandName) {
+        const cmd = commandsConfig.get(commandName);
+        if (!cmd || cmd.isHidden)
+            return message.reply("❌ الأمر غير موجود");
+
+        return message.reply(
+`📌 اسم الأمر: ${cmd.name}
+🔁 الأسماء البديلة: ${cmd.aliases?.join(", ") || "لا يوجد"}
+📝 الوصف: ${cmd.description || "لا يوجد"}
+🛠️ الاستخدام:
+${prefix}${cmd.name} ${cmd.usage || ""}
+
+📂 القسم: ${cmd.category}
+⏱️ الإنتظار: ${cmd.cooldown || 3} ثواني
+👤 المطوّر: ${cmd.credits || "غير معروف"}
+`);
+    }
+
+    // =========================
+    // تجميع الأوامر حسب الأقسام
+    // =========================
+    let devCmds = [];
+    let groupCmds = [];
+    let toolsCmds = [];
+    let funCmds = [];
+    let otherCmds = [];
+
+    for (const [key, cmd] of commandsConfig.entries()) {
+        if (cmd.isHidden) continue;
+        if (!cmd.permissions) cmd.permissions = [0, 1, 2];
+        if (!cmd.permissions.some(p => userPermissions.includes(p))) continue;
+
+        const name = cmd.name || key;
+        const cat = (cmd.category || "").toLowerCase();
+
+        if (cat.includes("dev") || cat.includes("owner") || cat.includes("المطور")) {
+            devCmds.push(name);
+        } else if (cat.includes("group") || cat.includes("admin") || cat.includes("المجموعه")) {
+            groupCmds.push(name);
+        } else if (cat.includes("tool") || cat.includes("util") || cat.includes("ادوات")) {
+            toolsCmds.push(name);
+        } else if (cat.includes("fun") || cat.includes("game") || cat.includes("ترفيه")) {
+            funCmds.push(name);
+        } else {
+            otherCmds.push(name);
+        }
+    }
+
+    // =========================
+    // شكل القائمة
+    // =========================
+    let body =
+`✨🤖 قائمة أوامر البوت 🤖✨
+━━━━━━━━━━━━━━━━━━━
+
+👑 قسم المطوّر
+${devCmds.length ? devCmds.map(c => `• ${c}`).join("\n") : "لا توجد أوامر"}
+
+━━━━━━━━━━━━━━━━━━━
+👥 قسم المجموعة
+${groupCmds.length ? groupCmds.map(c => `• ${c}`).join("\n") : "لا توجد أوامر"}
+
+━━━━━━━━━━━━━━━━━━━
+🛠️ قسم الأدوات
+${toolsCmds.length ? toolsCmds.map(c => `• ${c}`).join("\n") : "لا توجد أوامر"}
+
+━━━━━━━━━━━━━━━━━━━
+🎮 قسم الترفيه
+${funCmds.length ? funCmds.map(c => `• ${c}`).join("\n") : "لا توجد أوامر"}
+
+━━━━━━━━━━━━━━━━━━━
+📦 أوامر أخرى
+${otherCmds.length ? otherCmds.map(c => `• ${c}`).join("\n") : "لا توجد أوامر"}
+
+━━━━━━━━━━━━━━━━━━━
+📝 لشرح أي أمر:
+${prefix}مساعدة <اسم الأمر>
+`;
+
+    // =========================
+    // 🔲 مكان الصورة (لاحقاً)
+    // =========================
+    /*
+    const image = await global.getStream("<a href="https://imgbb.com/"><img src="https://i.ibb.co/PJK2n1N/Messenger-creation-2-DBBF1-E2-3696-464-A-BA72-D62-B034-DA8-F1.jpg" alt="Messenger creation 2DBBF1E2 3696 464A BA72 D62B034DA8F1" border="0"></a>");
+    return message.reply({ body, attachment: image });
+    */
+
+    return message.reply(body);
+}
+
+export default {
+    config,
+    onCall
+    }
